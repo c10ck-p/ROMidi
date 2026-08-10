@@ -1,0 +1,11 @@
+__pycache__/
+build/
+dist/
+midi/
+saves/
+*.spec
+*.pt
+*.onnx
+test_update.py
+.venv/
+extract_i18n.py
