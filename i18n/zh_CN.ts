@@ -167,6 +167,59 @@ None: No sustain pedal</source>
       <translation>检查更新</translation>
     </message>
     <message>
+      <!-- Source: main.py:L511 -->
+      <source>Up to Date</source>
+      <translation>已是最新版本</translation>
+    </message>
+    <message>
+      <!-- Source: main.py:L512 -->
+      <source>ROMidi v%1 is the latest version.</source>
+      <translation>ROMidi v%1 已是最新版本。</translation>
+    </message>
+    <message>
+      <!-- Source: main.py:L517 -->
+      <source>Update Check Failed</source>
+      <translation>检查更新失败</translation>
+    </message>
+    <message>
+      <!-- Source: main.py:L518 -->
+      <source>Could not reach GitHub.
+Please check your internet connection.</source>
+      <translation>无法连接到 GitHub。
+请检查网络连接。</translation>
+    </message>
+    <message>
+      <!-- Source: main.py:L523 -->
+      <source>Update Available</source>
+      <translation>发现新版本</translation>
+    </message>
+    <message>
+      <!-- Source: main.py:L524 -->
+      <source>Update available to %1. Would you like to update?</source>
+      <translation>发现新版本 %1，是否立即更新？</translation>
+    </message>
+    <message>
+      <!-- Source: main.py:L534 -->
+      <source>Downloading update %1...</source>
+      <translation>正在下载更新 %1...</translation>
+    </message>
+    <message>
+      <!-- Source: main.py:L543 -->
+      <source>Update Failed</source>
+      <translation>更新失败</translation>
+    </message>
+    <message>
+      <!-- Source: main.py:L544 -->
+      <source>Could not download update:
+%1
+
+Please update manually from GitHub.</source>
+      <translation>下载更新失败：
+%1
+
+请前往 GitHub 手动更新。</translation>
+    </message>
+    <message>
       <!-- Source: ui\ThemeDialog.py:L119 -->
       <source>Choose colour</source>
       <translation>选择颜色</translation>

@@ -57,7 +57,7 @@ class MainWindow(QMainWindow):
         self._max_note_duration = 0.0
         self.current_pedal_intervals = []
 
-        self._preview_alias = "humidi_preview"
+        self._preview_alias = "romidi_preview"
         self._preview_playing = False
 
         self._bind_signals()
@@ -507,18 +507,21 @@ class MainWindow(QMainWindow):
 
     def _on_no_update(self):
         self._reset_update_btn()
-        QMessageBox.information(self, "Up to Date",
-            f"ROMidi v{APP_VERSION} is the latest version.")
+        QMessageBox.information(self,
+            tr("Up to Date"),
+            tr("ROMidi v%1 is the latest version.").arg(APP_VERSION))
 
     def _on_check_failed(self):
         self._reset_update_btn()
-        QMessageBox.warning(self, "Update Check Failed",
-            "Could not reach GitHub.\nPlease check your internet connection.")
+        QMessageBox.warning(self,
+            tr("Update Check Failed"),
+            tr("Could not reach GitHub.\nPlease check your internet connection."))
 
     def _on_update_available(self, latest_tag: str, download_url: str):
         reply = QMessageBox.question(
-            self, "Update Available",
-            f"Update available to {latest_tag}. Would you like to update?",
+            self,
+            tr("Update Available"),
+            tr("Update available to %1. Would you like to update?").arg(latest_tag),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.Yes,
         )
@@ -528,7 +531,7 @@ class MainWindow(QMainWindow):
         self._download_worker.finished.connect(self._on_download_finished)
         self._download_worker.failed.connect(self._on_download_failed)
         self._download_worker.start()
-        self.ui.log_output.append(f"Downloading update {latest_tag}...")
+        self.ui.log_output.append(tr("Downloading update %1...").arg(latest_tag))
 
     def _on_download_finished(self, _tmp_path: str):
         self._save_config()
@@ -536,8 +539,9 @@ class MainWindow(QMainWindow):
         QApplication.quit()
 
     def _on_download_failed(self, error: str):
-        QMessageBox.warning(self, "Update Failed",
-            f"Could not download update:\n{error}\n\nPlease update manually from GitHub.")
+        QMessageBox.warning(self,
+            tr("Update Failed"),
+            tr("Could not download update:\n%1\n\nPlease update manually from GitHub.").arg(error))
 
     def closeEvent(self, event):
         self._update_checker.quit()
