@@ -1,9 +1,9 @@
 import random
-import numpy as np
-from typing import List, Set, Dict, Optional
 
-from core.models import Note, MusicalSection
+import numpy as np
+
 from core.core import get_time_groups
+from core.models import MusicalSection, Note
 
 # Independent per-group noise injected into hand drift (std dev in seconds).
 # This gives Hand Drift a meaningful effect even when Vary Timing is off.
@@ -11,7 +11,7 @@ _DRIFT_NOISE_SIGMA = 0.004
 
 
 class Humanizer:
-    def __init__(self, config: Dict, debug_log: Optional[List[str]] = None):
+    def __init__(self, config: dict, debug_log: list[str] | None = None):
         self.config = config
         self.debug_log = debug_log
         self.left_hand_drift = 0.0
@@ -21,7 +21,7 @@ class Humanizer:
         if self.debug_log is not None:
             self.debug_log.append(msg)
 
-    def apply_to_hand(self, notes: List[Note], hand: str, resync_points: Set[float]):
+    def apply_to_hand(self, notes: list[Note], hand: str, resync_points: set[float]):
         vary_timing       = self.config.get('vary_timing', False)
         vary_articulation = self.config.get('vary_articulation', False)
         enable_drift      = self.config.get('enable_drift_correction', False)
@@ -115,7 +115,7 @@ class Humanizer:
             summary_parts.append(f"articulation_base={self.config.get('articulation', 0.95):.2f}")
         self._log(f"[HUMANIZE] {hand.upper()} hand result: {' | '.join(summary_parts)}")
 
-    def apply_tempo_rubato(self, all_notes: List[Note], sections: List[MusicalSection]):
+    def apply_tempo_rubato(self, all_notes: list[Note], sections: list[MusicalSection]):
         if not self.config.get('enable_tempo_sway'):
             self._log("[RUBATO] Tempo sway disabled — skipping")
             return

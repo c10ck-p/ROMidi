@@ -1,10 +1,9 @@
 import math
-from typing import List, Dict, Tuple
 
 from pynput.keyboard import Key
 
-from core.models import Note
 from core.core import KeyMapper, TempoMap
+from core.models import Note
 
 # Maps Shift+number to the symbol character produced
 _SHIFT_NUM_TO_SYMBOL = {
@@ -14,7 +13,7 @@ _SHIFT_NUM_TO_SYMBOL = {
 _SYMBOL_TO_BASE = {v: k for k, v in _SHIFT_NUM_TO_SYMBOL.items()}
 
 
-def _build_pitch_to_char(key_mapper: KeyMapper) -> Dict[int, str]:
+def _build_pitch_to_char(key_mapper: KeyMapper) -> dict[int, str]:
     """pitch -> display character for sheet notation (excludes Ctrl-modified keys)."""
     result = {}
     for pitch, data in key_mapper.key_map.items():
@@ -32,7 +31,7 @@ def _build_pitch_to_char(key_mapper: KeyMapper) -> Dict[int, str]:
     return result
 
 
-def _build_char_to_pitch(key_mapper: KeyMapper) -> Dict[str, int]:
+def _build_char_to_pitch(key_mapper: KeyMapper) -> dict[str, int]:
     """display character -> pitch (reverse of _build_pitch_to_char)."""
     result = {}
     for pitch, char in _build_pitch_to_char(key_mapper).items():
@@ -49,7 +48,7 @@ class VirtualPianoFormat:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _parse_chunk(chunk: str) -> List[Tuple[List[str], int]]:
+    def _parse_chunk(chunk: str) -> list[tuple[list[str], int]]:
         """
         Parse one space-separated chunk into a list of (chars, dash_count) tuples.
 
@@ -92,7 +91,7 @@ class VirtualPianoFormat:
     # ------------------------------------------------------------------
 
     @classmethod
-    def parse(cls, text: str, bpm: float, key_mapper: KeyMapper) -> List[Note]:
+    def parse(cls, text: str, bpm: float, key_mapper: KeyMapper) -> list[Note]:
         """Convert a Virtual Piano text sheet to Note objects.
 
         Each token is assumed to be a 16th note (0 dashes), 8th (1 dash),
@@ -102,7 +101,7 @@ class VirtualPianoFormat:
         char_to_pitch = _build_char_to_pitch(key_mapper)
         base_16th = 60.0 / (bpm * 4)
 
-        notes: List[Note] = []
+        notes: list[Note] = []
         note_id = 0
         current_time = 0.0
 
@@ -136,7 +135,7 @@ class VirtualPianoFormat:
     # ------------------------------------------------------------------
 
     @classmethod
-    def serialize(cls, notes: List[Note], key_mapper: KeyMapper, tempo_map: TempoMap) -> str:
+    def serialize(cls, notes: list[Note], key_mapper: KeyMapper, tempo_map: TempoMap) -> str:
         """Convert Note objects to Virtual Piano sheet text.
 
         Notes:
@@ -161,7 +160,7 @@ class VirtualPianoFormat:
             return max(0, min(exp, 3))  # cap at half note (3 dashes)
 
         # Group notes by quantized start time
-        groups: Dict[float, Dict] = {}
+        groups: dict[float, dict] = {}
         for note in sorted(notes, key=lambda n: n.start_time):
             char = pitch_to_char.get(note.pitch)
             if char is None:
@@ -190,7 +189,7 @@ class VirtualPianoFormat:
 
         # Wrap into lines of ~80 chars
         lines = []
-        current_line: List[str] = []
+        current_line: list[str] = []
         line_len = 0
         for token in tokens:
             if line_len + len(token) + 1 > 80 and current_line:
@@ -222,7 +221,7 @@ class FormatRegistry:
     }
 
     @classmethod
-    def names(cls) -> List[str]:
+    def names(cls) -> list[str]:
         return list(cls._FORMATS.keys())
 
     @classmethod

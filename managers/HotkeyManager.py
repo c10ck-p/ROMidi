@@ -1,6 +1,8 @@
-from PyQt6.QtCore import QObject, pyqtSignal as Signal
 from pynput import keyboard
 from pynput.keyboard import Key
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import pyqtSignal as Signal
+
 
 class HotkeyManager(QObject):
     toggle_requested = Signal()

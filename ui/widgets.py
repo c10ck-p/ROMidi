@@ -1,5 +1,6 @@
-from PyQt6.QtWidgets import QFrame, QVBoxLayout, QLabel
-from PyQt6.QtCore import Qt, QEvent, pyqtSignal as Signal
+from PyQt6.QtCore import QEvent, Qt
+from PyQt6.QtCore import pyqtSignal as Signal
+from PyQt6.QtWidgets import QFrame, QLabel, QVBoxLayout
 
 
 class NavButton(QFrame):

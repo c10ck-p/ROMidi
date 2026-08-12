@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+
 
 @dataclass
 class Note:
@@ -22,7 +22,7 @@ class MidiTrack:
     name: str
     program_change: int
     is_drum: bool
-    notes: List[Note]
+    notes: list[Note]
     
     @property
     def note_count(self) -> int:
@@ -46,13 +46,13 @@ class KeyEvent:
     priority: int = field(compare=True)
     action: str = field(compare=False)
     key_char: str = field(compare=False)
-    pitch: Optional[int] = field(default=None, compare=False)
+    pitch: int | None = field(default=None, compare=False)
 
 @dataclass
 class MusicalSection:
     start_time: float
     end_time: float
-    notes: List[Note]
+    notes: list[Note]
     articulation_label: str = 'unknown'
     pace_label: str = 'normal'
     start_beat: float = 0.0

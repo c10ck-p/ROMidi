@@ -1,18 +1,20 @@
-from PyQt6.QtCore import QObject, pyqtSignal as Signal
-from pynput.keyboard import Key, Controller
-import time
-import threading
-import traceback
-import heapq
-import random
 import bisect
 import copy
-from typing import List, Dict, Optional, Tuple
+import heapq
+import random
+import threading
+import time
+import traceback
 
-from core.models import Note, KeyEvent, MusicalSection, KeyState
-from core.core import TempoMap, KeyMapper
+from pynput.keyboard import Controller, Key
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import pyqtSignal as Signal
+
+from core import pedal_generator
+from core.core import KeyMapper, TempoMap
 from core.humanizer import Humanizer
-import core.pedal_generator as pedal_generator
+from core.models import KeyEvent, KeyState, MusicalSection, Note
+
 
 class Player(QObject):
     status_updated = Signal(str)
@@ -23,7 +25,7 @@ class Player(QObject):
     auto_paused = Signal()
     error_occurred = Signal(str)
 
-    def __init__(self, config: Dict, notes: List[Note], sections: List[MusicalSection], tempo_map: TempoMap):
+    def __init__(self, config: dict, notes: list[Note], sections: list[MusicalSection], tempo_map: TempoMap):
         super().__init__()
         self.config = config
         self.notes = notes
@@ -32,18 +34,18 @@ class Player(QObject):
         self.keyboard = Controller()
         self.mapper = KeyMapper(use_88_key_layout=self.config.get('use_88_key_layout', False))
         
-        self.compiled_events: List[KeyEvent] = []
+        self.compiled_events: list[KeyEvent] = []
         self.event_index = 0
 
         self.stop_event = threading.Event()
         self.pause_event = threading.Event()
-        self.key_states: Dict[str, KeyState] = {}
+        self.key_states: dict[str, KeyState] = {}
         self.active_pitches: set = set()
         self.pedal_is_down = False
 
         # Running key-net state for O(1) resume sync (maintained by _execute_chord_event)
-        self._key_net: Dict[str, int] = {}
-        self._key_last_press: Dict[str, KeyEvent] = {}
+        self._key_net: dict[str, int] = {}
+        self._key_last_press: dict[str, KeyEvent] = {}
         self._pedal_net_down = False
         
         self.start_time = 0.0
@@ -54,7 +56,7 @@ class Player(QObject):
         self.last_progress_emit_time = 0.0
         self.progress_update_interval = 1.0 / 60.0
         
-        self.debug_log: Optional[List[str]] = [] if self.config.get('debug_mode') else None
+        self.debug_log: list[str] | None = [] if self.config.get('debug_mode') else None
         self.current_section_idx = -1
     
     def _log_debug(self, msg: str):
@@ -92,7 +94,7 @@ class Player(QObject):
         self._log_debug("\n=== COMPILATION ===")
         self._compile_event_list(all_notes, self.sections)
 
-    def export_compiled_events(self) -> List[KeyEvent]:
+    def export_compiled_events(self) -> list[KeyEvent]:
         """
         Standalone compilation pipeline for generating serialization data
         without modifying or interrupting the hardware execution loop in play().
@@ -101,7 +103,7 @@ class Player(QObject):
         self._apply_humanization_and_compile()
         return self.compiled_events
 
-    def load_compiled_events(self, events: List[KeyEvent], total_duration: float):
+    def load_compiled_events(self, events: list[KeyEvent], total_duration: float):
         """Load pre-compiled events for saved playback, bypassing the compilation pipeline.
 
         Populates key_states so the physical simulation loop can track key presses,
@@ -153,7 +155,7 @@ class Player(QObject):
             self._run_cursor_loop()
 
         except Exception as e:
-            error_msg = f"Critical Execution Error:\n{str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+            error_msg = f"Critical Execution Error:\n{e!s}\n\nTraceback:\n{traceback.format_exc()}"
             self.error_occurred.emit(error_msg)
             self.stop_event.set()
         finally:
@@ -220,7 +222,7 @@ class Player(QObject):
             self.status_updated.emit(f"{i}...")
             time.sleep(1)
 
-    def _compile_event_list(self, notes_to_play: List[Note], sections: List[MusicalSection]):
+    def _compile_event_list(self, notes_to_play: list[Note], sections: list[MusicalSection]):
         self.key_states.clear()
         use_mistakes   = self.config.get('enable_mistakes', False)
         mistake_chance = self.config.get('mistake_chance', 0) / 100.0
@@ -287,7 +289,7 @@ class Player(QObject):
                 f"{pedal_down / self.total_duration:.2f} pedal-downs/sec"
             )
             
-    def _get_mistake_pitch(self, original_pitch: int) -> Optional[int]:
+    def _get_mistake_pitch(self, original_pitch: int) -> int | None:
         candidates = [original_pitch + d for d in (-2, -1, 1, 2)]
         if KeyMapper.is_black_key(original_pitch):
             black_pool = [p for p in candidates if KeyMapper.is_black_key(p)]
@@ -368,13 +370,13 @@ class Player(QObject):
                 self.progress_updated.emit(playback_time)
                 self.last_progress_emit_time = now
 
-    def _get_press_info_from_event(self, event: KeyEvent) -> Tuple[List[Key], str]:
+    def _get_press_info_from_event(self, event: KeyEvent) -> tuple[list[Key], str]:
         if event.pitch is None: return [], event.key_char
         key_data = self.mapper.get_key_data(event.pitch)
         if not key_data: return [], event.key_char
         return key_data['modifiers'], key_data['key']
         
-    def _execute_chord_event(self, events: List[KeyEvent], playback_time: float):
+    def _execute_chord_event(self, events: list[KeyEvent], playback_time: float):
         if self.stop_event.is_set(): return
         press_events = [e for e in events if e.action == 'press']
         release_events = [e for e in events if e.action == 'release']
@@ -469,7 +471,7 @@ class Player(QObject):
         Uses the running _key_net / _key_last_press counters maintained by
         _execute_chord_event — O(currently-held keys) instead of O(all events).
         """
-        pitch_net: Dict[int, int] = {}
+        pitch_net: dict[int, int] = {}
         keys_repressed = []
         for key_char, count in self._key_net.items():
             if count > 0 and key_char in self.key_states:

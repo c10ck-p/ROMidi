@@ -1,7 +1,8 @@
+import json
 import os
 import sys
-import json
 from pathlib import Path
+
 
 class ConfigManager:
     def __init__(self):

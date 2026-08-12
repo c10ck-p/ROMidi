@@ -2,15 +2,15 @@ import copy
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal as Signal
+from PyQt6.QtCore import QObject, QThread
+from PyQt6.QtCore import pyqtSignal as Signal
 
-from core.models import Note, KeyEvent
+from core import pedal_generator
 from core.core import MidiParser, TempoMap
-from core.section_analyzer import SectionAnalyzer, assign_hands
+from core.models import KeyEvent, Note
 from core.player import Player
-import core.pedal_generator as pedal_generator
+from core.section_analyzer import SectionAnalyzer, assign_hands
 
 
 def _extract_pedal_intervals(pedal_events) -> list:
@@ -28,7 +28,7 @@ def _extract_pedal_intervals(pedal_events) -> list:
     return intervals
 
 
-def _prepare_notes(config: Dict, selected_tracks_info: List, log=None):
+def _prepare_notes(config: dict, selected_tracks_info: list, log=None):
     """Parse MIDI, apply track role assignments, and run hand simulation.
 
     Shared by PlaybackController.play() and _SaveWorker.run() to eliminate the
@@ -73,7 +73,7 @@ class _SaveWorker(QObject):
     save_failed = Signal(str)
     finished = Signal()
 
-    def __init__(self, config: Dict, selected_tracks_info: List, save_dir: str, original_filename: str):
+    def __init__(self, config: dict, selected_tracks_info: list, save_dir: str, original_filename: str):
         super().__init__()
         self.config = config
         self.selected_tracks_info = selected_tracks_info
@@ -189,7 +189,7 @@ class PlaybackController(QObject):
         self.player_thread = None
         self.playback_finished.emit()
 
-    def save(self, config: Dict, selected_tracks_info: List, save_dir: str, original_filename: str):
+    def save(self, config: dict, selected_tracks_info: list, save_dir: str, original_filename: str):
         if self._save_thread and self._save_thread.isRunning():
             return
         self._save_thread = QThread()
@@ -211,7 +211,7 @@ class PlaybackController(QObject):
         self._save_worker = None
         self._save_thread = None
 
-    def play(self, config: Dict, selected_tracks_info: List):
+    def play(self, config: dict, selected_tracks_info: list):
         self.status_updated.emit("Preparing playback...")
 
         debug_log = self.status_updated.emit if config.get('debug_mode') else None
@@ -267,7 +267,7 @@ class PlaybackController(QObject):
 
         self.player_thread.start()
 
-    def play_from_notes(self, config: Dict, notes: List[Note], tempo_map: TempoMap):
+    def play_from_notes(self, config: dict, notes: list[Note], tempo_map: TempoMap):
         """Start playback from pre-built Note objects, bypassing MIDI file parsing.
 
         Used by the Translator tab to play imported sheet text directly through
@@ -310,7 +310,7 @@ class PlaybackController(QObject):
 
         self.player_thread.start()
 
-    def play_from_save(self, loaded_save_data: Dict):
+    def play_from_save(self, loaded_save_data: dict):
         self.status_updated.emit("Initializing playback from pre-compiled serialization...")
         config = loaded_save_data.get('metadata', {}).get('playback_settings', {})
         events_data = loaded_save_data.get('compiled_events', [])

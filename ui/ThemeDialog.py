@@ -7,18 +7,30 @@ whatever was active when the dialog was opened.
 """
 
 from __future__ import annotations
+
 from dataclasses import replace
 
-from PyQt6.QtWidgets import (
-    QDialog, QHBoxLayout, QVBoxLayout, QListWidget, QListWidgetItem,
-    QLabel, QLineEdit, QPushButton, QScrollArea, QWidget,
-    QDialogButtonBox, QFrame, QMessageBox
-)
-from PyQt6.QtCore import Qt, pyqtSignal as Signal
+from PyQt6.QtCore import Qt
+from PyQt6.QtCore import pyqtSignal as Signal
 from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import (
+    QDialog,
+    QDialogButtonBox,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QVBoxLayout,
+    QWidget,
+)
 
-from ui.theme import ThemeColors, ThemeManager, generate_stylesheet, BUILTIN_THEMES
-
+from i18n import tr, language_changed
+from ui.theme import BUILTIN_THEMES, ThemeColors, ThemeManager, generate_stylesheet
 
 # ── Colour labels (order matters — shown in the editor) ───────────────────
 
@@ -34,6 +46,19 @@ _COLOR_FIELDS = [
     ("accent_stop",   "Stop / Danger"),
     ("pedal_color",   "Pedal Color"),
 ]
+
+_COLOR_LABELS = {
+    "bg_primary":    tr("Background"),
+    "bg_secondary":   tr("Surface"),
+    "bg_input":      tr("Input Fields"),
+    "accent":        tr("Accent"),
+    "text_primary":  tr("Text"),
+    "text_secondary": tr("Muted Text"),
+    "border":        tr("Borders"),
+    "accent_play":   tr("Play Color"),
+    "accent_stop":   tr("Stop / Danger"),
+    "pedal_color":   tr("Pedal Color"),
+}
 
 
 # ── Color swatch widget ────────────────────────────────────────────────────
@@ -91,7 +116,7 @@ class _ColorSwatch(QWidget):
             return
         from PyQt6.QtWidgets import QColorDialog
         initial = QColor(self._color)
-        color = QColorDialog.getColor(initial, self, "Choose colour")
+        color = QColorDialog.getColor(initial, self, tr("Choose colour"))
         if color.isValid():
             self.set_color(color.name(), emit=True)
 
@@ -140,11 +165,13 @@ class ThemeDialog(QDialog):
         self._current_theme: ThemeColors | None = None
         self._pending_save = False      # True when unsaved edits exist
 
-        self.setWindowTitle("Theme Manager")
+        self.setWindowTitle(tr("Theme Manager"))
         self.setMinimumSize(520, 520)
         self._apply_own_stylesheet()
         self._build_ui()
+        self._retranslate()
         self._populate_list()
+        language_changed().connect(self._retranslate)
 
     # ── Layout ────────────────────────────────────────────────────────
 
@@ -163,8 +190,9 @@ class ThemeDialog(QDialog):
         left_vbox.setContentsMargins(0, 0, 0, 0)
         left_vbox.setSpacing(6)
 
-        list_label = QLabel("Themes")
+        list_label = QLabel()
         list_label.setProperty("role", "section")
+        self._list_label = list_label
         left_vbox.addWidget(list_label)
 
         self._list = QListWidget()
@@ -173,12 +201,10 @@ class ThemeDialog(QDialog):
 
         list_btns = QHBoxLayout()
         list_btns.setSpacing(4)
-        self._new_btn = QPushButton("New")
-        self._new_btn.setToolTip("Duplicate the selected theme as a new custom preset")
+        self._new_btn = QPushButton()
         self._new_btn.clicked.connect(self._on_new)
-        self._del_btn = QPushButton("Delete")
+        self._del_btn = QPushButton()
         self._del_btn.setObjectName("reset_button")
-        self._del_btn.setToolTip("Delete this custom theme (built-in themes cannot be deleted)")
         self._del_btn.setEnabled(False)
         self._del_btn.clicked.connect(self._on_delete)
         list_btns.addWidget(self._new_btn)
@@ -201,18 +227,17 @@ class ThemeDialog(QDialog):
 
         # Name row
         name_row = QHBoxLayout()
-        name_lbl = QLabel("Name")
+        name_lbl = QLabel()
         name_lbl.setFixedWidth(110)
         name_lbl.setProperty("role", "muted")
+        self._name_lbl = name_lbl
         self._name_edit = QLineEdit()
-        self._name_edit.setPlaceholderText("Custom theme name…")
         self._name_edit.textEdited.connect(self._mark_dirty)
         name_row.addWidget(name_lbl)
         name_row.addWidget(self._name_edit)
         right_vbox.addLayout(name_row)
 
-        # Builtin badge
-        self._builtin_label = QLabel("Built-in — read only")
+        self._builtin_label = QLabel()
         self._builtin_label.setProperty("role", "muted")
         self._builtin_label.setStyleSheet("font-style: italic;")
         self._builtin_label.setVisible(False)
@@ -228,18 +253,20 @@ class ThemeDialog(QDialog):
         swatch_vbox.setSpacing(10)
 
         self._swatches: dict[str, _ColorSwatch] = {}
-        for key, label in _COLOR_FIELDS:
+        self._swatch_labels: dict[str, QLabel] = {}
+        for key, _lbl in _COLOR_FIELDS:
             sw = _ColorSwatch()
             sw.colorChanged.connect(lambda _hex, k=key: self._on_color_changed(k, _hex))
             row = QHBoxLayout()
             row.setSpacing(8)
-            row_label = QLabel(label)
+            row_label = QLabel()
             row_label.setFixedWidth(110)
             row_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             row.addWidget(row_label)
             row.addWidget(sw, 1)
             swatch_vbox.addLayout(row)
             self._swatches[key] = sw
+            self._swatch_labels[key] = row_label
 
         swatch_vbox.addStretch()
         scroll.setWidget(swatch_container)
@@ -247,14 +274,12 @@ class ThemeDialog(QDialog):
 
         # Save/revert row
         action_row = QHBoxLayout()
-        self._save_btn = QPushButton("Save Changes")
+        self._save_btn = QPushButton()
         self._save_btn.setObjectName("save_button")
         self._save_btn.setEnabled(False)
-        self._save_btn.setToolTip("Persist edits to this custom theme")
         self._save_btn.clicked.connect(self._on_save)
-        self._revert_btn = QPushButton("Revert")
+        self._revert_btn = QPushButton()
         self._revert_btn.setEnabled(False)
-        self._revert_btn.setToolTip("Discard unsaved edits")
         self._revert_btn.clicked.connect(self._on_revert)
         action_row.addWidget(self._save_btn)
         action_row.addWidget(self._revert_btn)
@@ -273,14 +298,59 @@ class ThemeDialog(QDialog):
         bbox = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
-        ok_btn = bbox.button(QDialogButtonBox.StandardButton.Ok)
-        if ok_btn:
-            ok_btn.setObjectName("save_button")
+        self._ok_btn = bbox.button(QDialogButtonBox.StandardButton.Ok)
+        if self._ok_btn:
+            self._ok_btn.setObjectName("save_button")
+        self._cancel_btn = bbox.button(QDialogButtonBox.StandardButton.Cancel)
         bbox.accepted.connect(self._on_accept)
         bbox.rejected.connect(self._on_cancel)
         outer.addWidget(bbox)
 
     # ── Population ────────────────────────────────────────────────────
+
+    def _retranslate(self, lang_code: str = "") -> None:
+        self.setWindowTitle(tr("Theme Manager"))
+        self._list_label.setText(tr("Themes"))
+        self._new_btn.setText(tr("New"))
+        self._new_btn.setToolTip(tr("Duplicate the selected theme as a new custom preset"))
+        self._del_btn.setText(tr("Delete"))
+        self._del_btn.setToolTip(tr("Delete this custom theme (built-in themes cannot be deleted)"))
+        self._name_lbl.setText(tr("Name"))
+        self._name_edit.setPlaceholderText(tr("Custom theme name…"))
+        self._builtin_label.setText(tr("Built-in — read only"))
+        self._save_btn.setText(tr("Save Changes"))
+        self._save_btn.setToolTip(tr("Persist edits to this custom theme"))
+        self._revert_btn.setText(tr("Revert"))
+        self._revert_btn.setToolTip(tr("Discard unsaved edits"))
+        if self._ok_btn:
+            self._ok_btn.setText(tr("OK"))
+        if self._cancel_btn:
+            self._cancel_btn.setText(tr("Cancel"))
+        for key, _lbl in _COLOR_FIELDS:
+            self._swatch_labels[key].setText(tr(_COLOR_LABELS[key]))
+        self._refresh_list_display()
+
+    def _refresh_list_display(self) -> None:
+        current_data = None
+        if self._list.currentRow() >= 0:
+            current_data = self._list.item(self._list.currentRow()).data(Qt.ItemDataRole.UserRole)
+        self._list.blockSignals(True)
+        for i in range(self._list.count()):
+            item = self._list.item(i)
+            orig_name = item.data(Qt.ItemDataRole.UserRole)
+            item.setText(tr(orig_name))
+        self._list.blockSignals(False)
+        if current_data:
+            themes = ThemeManager.all_themes()
+            if current_data in themes:
+                for i in range(self._list.count()):
+                    if self._list.item(i).data(Qt.ItemDataRole.UserRole) == current_data:
+                        self._list.setCurrentRow(i)
+                        break
+        if self._current_theme:
+            t = self._current_theme
+            display_name = tr(t.name) if t.builtin else t.name
+            self._name_edit.setText(display_name)
 
     def _populate_list(self, select_name: str | None = None) -> None:
         self._list.blockSignals(True)
@@ -289,7 +359,8 @@ class ThemeDialog(QDialog):
         active = ThemeManager.get_active_name()
         target_row = 0
         for i, (name, t) in enumerate(themes.items()):
-            item = QListWidgetItem(name)
+            item = QListWidgetItem(tr(name))
+            item.setData(Qt.ItemDataRole.UserRole, name)
             if t.builtin:
                 item.setForeground(QColor(ThemeManager.get_active().text_secondary))
             self._list.addItem(item)
@@ -303,7 +374,7 @@ class ThemeDialog(QDialog):
     def _on_row_changed(self, row: int) -> None:
         if row < 0:
             return
-        name = self._list.item(row).text()
+        name = self._list.item(row).data(Qt.ItemDataRole.UserRole)
         themes = ThemeManager.all_themes()
         theme = themes.get(name)
         if theme is None:
@@ -312,7 +383,8 @@ class ThemeDialog(QDialog):
         self._pending_save = False
 
         # Populate editor
-        self._name_edit.setText(theme.name)
+        display_name = tr(theme.name) if theme.builtin else theme.name
+        self._name_edit.setText(display_name)
         self._name_edit.setReadOnly(theme.builtin)
         self._builtin_label.setVisible(theme.builtin)
         for key, _lbl in _COLOR_FIELDS:
@@ -357,8 +429,8 @@ class ThemeDialog(QDialog):
             return
         name = self._current_theme.name
         reply = QMessageBox.question(
-            self, "Delete Theme",
-            f'Delete custom theme "{name}"?',
+            self, tr("Delete Theme"),
+            tr('Delete custom theme "%1"?').arg(name),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
@@ -375,7 +447,7 @@ class ThemeDialog(QDialog):
             return
         new_name = self._name_edit.text().strip()
         if not new_name:
-            QMessageBox.warning(self, "Name required", "Please enter a theme name.")
+            QMessageBox.warning(self, tr("Name required"), tr("Please enter a theme name."))
             return
         old_name = self._current_theme.name
         updated = replace(self._current_theme, name=new_name, builtin=False)
@@ -409,8 +481,8 @@ class ThemeDialog(QDialog):
     def _on_accept(self) -> None:
         if self._pending_save:
             reply = QMessageBox.question(
-                self, "Unsaved Changes",
-                "You have unsaved edits. Save them before applying?",
+                self, tr("Unsaved Changes"),
+                tr("You have unsaved edits. Save them before applying?"),
                 QMessageBox.StandardButton.Save |
                 QMessageBox.StandardButton.Discard |
                 QMessageBox.StandardButton.Cancel,

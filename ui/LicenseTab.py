@@ -1,9 +1,27 @@
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
-                             QLabel, QComboBox, QTextEdit)
 from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QHBoxLayout,
+    QLabel,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
+from i18n import tr, language_changed
 
 _LICENSE_TEXTS: dict[str, str] = {
+    "ROMidi": """\
+ROMidi — A community fork of HuMidi
+
+Based on HuMidi by smyGitt (https://github.com/smyGitt/HuMidi-Roblox-Piano-Autoplayer)
+
+This is a modified fork focused on UI polish, i18n support, and theme
+customization. All original code is licensed under the MIT License.
+
+Original Copyright (c) 2026 smyGitt
+""",
+
     "HuMidi": """\
 MIT License
 
@@ -92,34 +110,43 @@ class LicenseTab(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._setup_ui()
+        self._retranslate()
+        language_changed().connect(self._retranslate)
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(10)
 
-        header = QLabel("Licenses & Credits")
-        header.setProperty("role", "title")
-        layout.addWidget(header)
+        self._header = QLabel()
+        self._header.setProperty("role", "title")
+        layout.addWidget(self._header)
 
         selector_row = QHBoxLayout()
         selector_row.setSpacing(8)
-        sel_lbl = QLabel("View:")
-        sel_lbl.setProperty("role", "muted")
-        sel_lbl.setFixedWidth(34)
+        self._sel_lbl = QLabel()
+        self._sel_lbl.setProperty("role", "muted")
+        self._sel_lbl.setFixedWidth(34)
         self._combo = QComboBox()
         for name in _LICENSE_TEXTS:
-            self._combo.addItem(name)
-        self._combo.currentTextChanged.connect(self._on_changed)
-        selector_row.addWidget(sel_lbl)
+            self._combo.addItem(tr(name), name)
+        self._combo.currentIndexChanged.connect(self._on_changed)
+        selector_row.addWidget(self._sel_lbl)
         selector_row.addWidget(self._combo, 1)
         layout.addLayout(selector_row)
 
         self._text = QTextEdit()
         self._text.setReadOnly(True)
         self._text.setFont(QFont("Courier New", 9))
-        self._text.setPlainText(_LICENSE_TEXTS.get(self._combo.currentText(), ""))
+        self._text.setPlainText(_LICENSE_TEXTS.get(self._combo.currentData(), ""))
         layout.addWidget(self._text)
 
-    def _on_changed(self, name: str) -> None:
-        self._text.setPlainText(_LICENSE_TEXTS.get(name, ""))
+    def _retranslate(self, lang_code: str = "") -> None:
+        self._header.setText(tr("Licenses & Credits"))
+        self._sel_lbl.setText(tr("View:"))
+        for i, name in enumerate(_LICENSE_TEXTS):
+            self._combo.setItemText(i, tr(name))
+
+    def _on_changed(self, index: int) -> None:
+        key = self._combo.itemData(index)
+        self._text.setPlainText(_LICENSE_TEXTS.get(key, ""))

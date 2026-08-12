@@ -1,9 +1,12 @@
-from PyQt6.QtWidgets import QWidget, QSizePolicy
-from PyQt6.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal
-from PyQt6.QtGui import QPainter, QBrush, QColor, QPen, QPixmap
-from typing import List
-from core.models import Note
+
+from PyQt6.QtCore import QPointF, QRectF, Qt
+from PyQt6.QtCore import pyqtSignal as Signal
+from PyQt6.QtGui import QBrush, QColor, QPainter, QPen, QPixmap
+from PyQt6.QtWidgets import QSizePolicy, QWidget
+
 from core.core import TempoMap
+from core.models import Note
+
 
 class PianoWidget(QWidget):
     def __init__(self, parent=None):
@@ -120,7 +123,7 @@ class TimelineWidget(QWidget):
         self.measure_line_color = QColor(255, 255, 255, 30)
         self.pedal_color = QColor(232, 160, 32, 180)       # amber, semi-transparent
 
-    def set_data(self, notes: List[Note], duration: float, tempo_map: TempoMap = None):
+    def set_data(self, notes: list[Note], duration: float, tempo_map: TempoMap = None):
         self.notes = notes
         self.total_duration = max(duration, 0.1)
         self.tempo_map = tempo_map

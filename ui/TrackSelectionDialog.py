@@ -1,7 +1,15 @@
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QLabel, QTableWidget,
-                             QTableWidgetItem, QHeaderView, QAbstractItemView,
-                             QComboBox, QDialogButtonBox)
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QAbstractItemView,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QHeaderView,
+    QLabel,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+)
 
 from ui.theme import ThemeManager, generate_stylesheet
 

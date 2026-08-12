@@ -1,11 +1,13 @@
-import mido
 import bisect
 from collections import defaultdict
-from typing import List, Tuple, Dict, Optional
-from core.models import Note, MidiTrack
+
+import mido
 from pynput.keyboard import Key
 
-def get_time_groups(notes: List[Note], threshold: float = 0.015) -> List[List[Note]]:
+from core.models import MidiTrack, Note
+
+
+def get_time_groups(notes: list[Note], threshold: float = 0.015) -> list[list[Note]]:
     if not notes: return []
     groups, current_group = [], [notes[0]]
     for i in range(1, len(notes)):
@@ -17,7 +19,7 @@ def get_time_groups(notes: List[Note], threshold: float = 0.015) -> List[List[No
     return groups
 
 class TempoMap:
-    def __init__(self, tempo_events: List[Tuple[float, int]], time_signatures: List[Tuple[float, int, int]]):
+    def __init__(self, tempo_events: list[tuple[float, int]], time_signatures: list[tuple[float, int, int]]):
         self.events = sorted(tempo_events, key=lambda x: x[0])
         self.time_signatures = sorted(time_signatures, key=lambda x: x[0])
         self.beat_map = [] 
@@ -68,7 +70,7 @@ class TempoMap:
         if idx < 0: return 500000
         return self.events[idx][1]
 
-    def get_measure_boundaries(self, total_duration: float) -> List[Tuple[float, float]]:
+    def get_measure_boundaries(self, total_duration: float) -> list[tuple[float, float]]:
         measures = []
         ts_events = self.time_signatures if self.time_signatures else [(0.0, 4, 4)]
         total_beats = self.time_to_beat(total_duration)
@@ -118,20 +120,20 @@ class GlobalTickMap:
 
     def tick_to_time(self, tick: int) -> float:
         idx = bisect.bisect_right(self._tick_values, tick) - 1
-        if idx < 0: idx = 0
+        idx = max(idx, 0)
         last_tick, last_time, tempo = self.tick_map[idx]
         return last_time + mido.tick2second(tick - last_tick, self.ticks_per_beat, tempo)
 
 class MidiParser:
     @staticmethod
-    def parse_structure(filepath: str, tempo_scale: float = 1.0, debug_log: Optional[List[str]] = None) -> Tuple[List[MidiTrack], TempoMap]:
+    def parse_structure(filepath: str, tempo_scale: float = 1.0, debug_log: list[str] | None = None) -> tuple[list[MidiTrack], TempoMap]:
         try:
             try:
                 mid = mido.MidiFile(filepath, charset='utf-8')
             except UnicodeDecodeError:
                 mid = mido.MidiFile(filepath)
         except Exception as e:
-            raise IOError(f"Could not read MIDI file: {e}")
+            raise OSError(f"Could not read MIDI file: {e}")
             
         global_map = GlobalTickMap(mid)
         tempo_map_data = [(entry[1], entry[2]) for entry in global_map.tick_map]
@@ -143,8 +145,8 @@ class MidiParser:
             track_name = f"Track {i}"
             program_change = 0
             is_drum = False
-            notes: List[Note] = []
-            open_notes: Dict[int, List[Dict]] = defaultdict(list)
+            notes: list[Note] = []
+            open_notes: dict[int, list[dict]] = defaultdict(list)
             current_abs_tick = 0
             
             for msg in track:
@@ -217,7 +219,7 @@ class KeyMapper:
                 current_pitch += 1
             white_key_index += 1
 
-    def get_key_data(self, pitch: int) -> Optional[Dict]:
+    def get_key_data(self, pitch: int) -> dict | None:
         p = pitch
         if p < self.min_pitch:
             while p < self.min_pitch: p += 12
@@ -225,7 +227,7 @@ class KeyMapper:
             while p > self.max_pitch: p -= 12
         return self.key_map.get(p)
 
-    def get_key_for_pitch(self, pitch: int) -> Optional[str]:
+    def get_key_for_pitch(self, pitch: int) -> str | None:
         data = self.get_key_data(pitch)
         return data['key'] if data else None
 

@@ -1,29 +1,36 @@
 #!/usr/bin/env python3
-import sys
-import os
 import bisect
-from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog, QDialog
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon
+import ctypes
+import os
+import sys
+import warnings
 
-from core.core import MidiParser, KeyMapper, TempoMap
-from core.translator import FormatRegistry
-from managers.HotkeyManager import HotkeyManager
-from managers.UpdateManager import UpdateChecker, DownloadWorker
+warnings.filterwarnings("ignore", message="sipPyTypeDict.*", category=DeprecationWarning)
+
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QApplication, QDialog, QFileDialog, QMainWindow, QMessageBox
+
 from controllers.PlaybackController import PlaybackController
+from core.core import KeyMapper, MidiParser, TempoMap
+from core.translator import FormatRegistry
 from managers.ConfigManager import ConfigManager
+from managers.HotkeyManager import HotkeyManager
+from i18n import tr
+from managers.UpdateManager import DownloadWorker, UpdateChecker
+from ui.LoadSaveDialog import LoadSaveDialog
 from ui.MainWindowUI import MainWindowUI
 from ui.TrackSelectionDialog import TrackSelectionDialog
-from ui.LoadSaveDialog import LoadSaveDialog
+from ui.theme import ThemeManager
 
-APP_VERSION = "2.0"
+APP_VERSION = "1.0"
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(f"HuMidi v{APP_VERSION}")
+        self.setWindowTitle(f"ROMidi v{APP_VERSION}")
         self.setMinimumWidth(820)
-        self.setMinimumHeight(485)
+        self.setMinimumHeight(550)
         self.resize(self.minimumWidth(), self.minimumHeight())
 
         # Set specific Icon base execution path (Required for OS Contexts)
@@ -31,6 +38,8 @@ class MainWindow(QMainWindow):
         icon_path = os.path.join(base_path, 'icon.ico')
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
+
+        self._enable_dark_title_bar()
         
         # Instantiate Domains
         self.config_manager = ConfigManager()
@@ -48,15 +57,17 @@ class MainWindow(QMainWindow):
         self._max_note_duration = 0.0
         self.current_pedal_intervals = []
 
+        self._preview_alias = "humidi_preview"
+        self._preview_playing = False
+
         self._bind_signals()
 
         # Load initialization data
         loaded_cfg = self.config_manager.load()
         if loaded_cfg:
             self.ui.load_config_to_ui(loaded_cfg, self.config_manager.save_dir)
-            self.ui.settings_tab.hk_label.setText(
-                f"Hotkey: {self.hotkey_manager._format_key_string(self.hotkey_manager.current_key)}"
-            )
+            key_str = self.hotkey_manager._format_key_string(self.hotkey_manager.current_key)
+            self.ui.settings_tab.set_hotkey_label(key_str)
         else:
             self.ui.reset_controls_to_default()
 
@@ -68,6 +79,7 @@ class MainWindow(QMainWindow):
         # UI controls bound strictly to Execution/Router logic
         self.ui.play_button.clicked.connect(self.handle_play)
         self.ui.stop_button.clicked.connect(self.handle_stop)
+        self.ui.preview_button.clicked.connect(self._toggle_preview)
         self.ui.save_button.clicked.connect(self.handle_save)
         self.ui.reset_button.clicked.connect(self.ui.reset_controls_to_default)
         self.ui.playback_tab.browse_button.clicked.connect(self.select_file)
@@ -90,6 +102,7 @@ class MainWindow(QMainWindow):
         self.ui.settings_tab.timeline_vis_check.toggled.connect(self._save_config)
         self.ui.settings_tab.piano_vis_check.toggled.connect(self._save_config)
         self.ui.settings_tab.use_ai_pedal_check.toggled.connect(self._save_config)
+        self.ui.settings_tab.lang_combo.currentIndexChanged.connect(self._save_config)
 
         # Translator tab
         self.ui.translator_tab.play_sheet_requested.connect(self._on_play_sheet)
@@ -116,12 +129,74 @@ class MainWindow(QMainWindow):
         self.playback_controller.save_successful.connect(self._on_save_successful)
         self.playback_controller.save_failed.connect(self._on_save_failed)
 
+    # --- MIDI Preview (system synth) ---
+    def _toggle_preview(self, checked=None, force_stop: bool = False) -> None:
+        if force_stop:
+            self._stop_preview()
+        elif self._preview_playing:
+            self._stop_preview()
+        else:
+            self._start_preview()
+
+    def _start_preview(self) -> None:
+        if sys.platform != "win32":
+            return
+        filepath = self.ui.playback_tab.file_path_label.toolTip()
+        if not filepath or not os.path.exists(filepath):
+            return
+        self._stop_preview()
+        try:
+            ctypes.windll.winmm.mciSendStringW(
+                f'open "{filepath}" type sequencer alias {self._preview_alias}',
+                None, 0, None
+            )
+            ctypes.windll.winmm.mciSendStringW(
+                f'play {self._preview_alias}',
+                None, 0, None
+            )
+            self._preview_playing = True
+            self.ui.preview_button.setCheckable(True)
+            self.ui.preview_button.setChecked(True)
+            self.ui.preview_button.setToolTip(tr("Click to stop previewing"))
+            self.ui.play_button.setEnabled(False)
+            self.ui.stop_button.setEnabled(False)
+        except Exception:
+            self._stop_preview()
+
+    def _stop_preview(self) -> None:
+        if sys.platform != "win32":
+            return
+        try:
+            ctypes.windll.winmm.mciSendStringW(
+                f'close {self._preview_alias}',
+                None, 0, None
+            )
+        except Exception:
+            pass
+        self._preview_playing = False
+        self.ui.preview_button.setChecked(False)
+        self.ui.preview_button.setToolTip(
+            tr("Audition the loaded MIDI file with the system synthesizer"))
+        self.ui.play_button.setEnabled(True)
+        self.ui.stop_button.setEnabled(
+            self.playback_controller.is_playing() or self.playback_controller.is_paused()
+        )
+
     # --- Windows Specific GUI Modifications ---
     def _toggle_always_on_top(self, checked):
-        flags = self.windowFlags()
-        if checked: self.setWindowFlags(flags | Qt.WindowType.WindowStaysOnTopHint)
-        else: self.setWindowFlags(flags & ~Qt.WindowType.WindowStaysOnTopHint)
-        self.show()
+        if sys.platform == 'win32':
+            handle = self.windowHandle()
+            flags = self.windowFlags()
+            if checked:
+                handle.setFlags(flags | Qt.WindowType.WindowStaysOnTopHint)
+            else:
+                handle.setFlags(flags & ~Qt.WindowType.WindowStaysOnTopHint)
+            self.update()
+        else:
+            flags = self.windowFlags()
+            if checked: self.setWindowFlags(flags | Qt.WindowType.WindowStaysOnTopHint)
+            else: self.setWindowFlags(flags & ~Qt.WindowType.WindowStaysOnTopHint)
+            self.show()
 
     def _change_opacity(self, value):
         self.setWindowOpacity(value / 100.0)
@@ -139,14 +214,14 @@ class MainWindow(QMainWindow):
             self._save_config()
 
     def _change_hotkey(self):
-        QMessageBox.information(self, "Bind Key", "Press the key you want to bind now.")
-        self.ui.settings_tab.hk_btn.setText("Listening...")
+        QMessageBox.information(self, tr("Bind Key"), tr("Press the key you want to bind now."))
+        self.ui.settings_tab.hk_btn.setText(tr("Listening..."))
         self.ui.settings_tab.hk_btn.setEnabled(False)
         self.hotkey_manager.start_binding()
 
     def _on_hotkey_bound(self, key_str):
-        self.ui.settings_tab.hk_label.setText(f"Hotkey: {key_str}")
-        self.ui.settings_tab.hk_btn.setText("Change")
+        self.ui.settings_tab.set_hotkey_label(key_str)
+        self.ui.settings_tab.hk_btn.setText(tr("Change"))
         self.ui.settings_tab.hk_btn.setEnabled(True)
         self._sync_play_button()
 
@@ -156,21 +231,21 @@ class MainWindow(QMainWindow):
         if self.ui._is_collapsed:
             if self.playback_controller.is_paused():
                 self.ui.play_button.setText("\uE768")
-                self.ui.play_button.setToolTip(f"Resume ({key_str})")
+                self.ui.play_button.setToolTip(tr("Resume (%1)").arg(key_str))
             elif self.playback_controller.is_playing():
                 self.ui.play_button.setText("\uE769")
-                self.ui.play_button.setToolTip(f"Pause ({key_str})")
+                self.ui.play_button.setToolTip(tr("Pause (%1)").arg(key_str))
             else:
                 self.ui.play_button.setText("\uE768")
-                self.ui.play_button.setToolTip(f"Play ({key_str})")
+                self.ui.play_button.setToolTip(tr("Play (%1)").arg(key_str))
         else:
             if self.playback_controller.is_paused():
-                self.ui.play_button.setText(f"Resume ({key_str})")
+                self.ui.play_button.setText(tr("Resume (%1)").arg(key_str))
             elif self.playback_controller.is_playing():
-                self.ui.play_button.setText(f"Pause ({key_str})")
+                self.ui.play_button.setText(tr("Pause (%1)").arg(key_str))
             else:
-                self.ui.play_button.setText(f"Play ({key_str})")
-            self.ui.play_button.setToolTip("Start, pause, or resume playback")
+                self.ui.play_button.setText(tr("Play (%1)").arg(key_str))
+            self.ui.play_button.setToolTip(tr("Start, pause, or resume playback"))
 
     def toggle_playback_state(self):
         if not self.playback_controller.is_paused():
@@ -232,6 +307,8 @@ class MainWindow(QMainWindow):
             self.ui.playback_tab.humanization_group.setEnabled(True)
             self.ui.update_file_label(os.path.basename(filepath), filepath)
             self.ui.log_output.append(f"Selected file: {filepath}")
+            self.ui.preview_button.setEnabled(True)
+            self._toggle_preview(force_stop=True)
             self._parse_and_select_tracks(filepath)
             
     def open_load_dialog(self):
@@ -248,6 +325,8 @@ class MainWindow(QMainWindow):
                 self.ui._set_save_enabled(False)
                 self.ui.play_button.setEnabled(True)
                 self.ui.scrubber_slider.setEnabled(True)
+                self.ui.preview_button.setEnabled(True)
+                self._toggle_preview(force_stop=True)
                 self.ui.log_output.append(f"Loaded save file: {self.loaded_save_filename}")
 
     def _parse_and_select_tracks(self, filepath):
@@ -372,6 +451,8 @@ class MainWindow(QMainWindow):
         if self.playback_controller.is_playing() or self.playback_controller.is_paused(): 
             self.toggle_playback_state()
             return
+
+        self._stop_preview()
             
         if self.loaded_save_data:
             self.playback_controller.play_from_save(self.loaded_save_data)
@@ -390,6 +471,7 @@ class MainWindow(QMainWindow):
             self.ui.tabs.setCurrentIndex(1)
 
     def handle_stop(self):
+        self._stop_preview()
         self.playback_controller.stop()
 
     def on_playback_finished(self):
@@ -414,12 +496,12 @@ class MainWindow(QMainWindow):
     def _reset_update_btn(self):
         btn = self.ui.settings_tab.check_update_btn
         btn.setEnabled(True)
-        btn.setText("Check for updates")
+        btn.setText(tr("Check for updates"))
 
     def _on_no_update(self):
         self._reset_update_btn()
         QMessageBox.information(self, "Up to Date",
-            f"HuMidi v{APP_VERSION} is the latest version.")
+            f"ROMidi v{APP_VERSION} is the latest version.")
 
     def _on_check_failed(self):
         self._reset_update_btn()
@@ -453,8 +535,57 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         self._update_checker.quit()
         self._save_config()
+        self._stop_preview()
         self.playback_controller.shutdown()
         event.accept()
+
+    def _enable_dark_title_bar(self):
+        if sys.platform != "win32":
+            return
+        QTimer.singleShot(0, lambda: self._apply_title_bar_theme(ThemeManager.get_active()))
+
+    def _apply_title_bar_theme(self, theme):
+        if sys.platform != "win32":
+            return
+        try:
+            hwnd = ctypes.wintypes.HWND(int(self.winId()))
+            bg = getattr(theme, 'bg_primary', '#1c1c2e')
+            r, g, b = self._hex_to_rgb_static(bg)
+            luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
+            is_dark = luminance < 0.5
+
+            DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_USE_IMMERSIVE_DARK_MODE,
+                ctypes.byref(ctypes.c_int(1 if is_dark else 0)),
+                ctypes.sizeof(ctypes.c_int),
+            )
+
+            cr = _DwmColorization()
+            cr.Color = 0x02000000 | (b << 16) | (g << 8) | r
+            cr.IsEnabled = 1
+            DWMWA_COLORIZATION_ATTRIBUTE = 33
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_COLORIZATION_ATTRIBUTE,
+                ctypes.byref(cr),
+                ctypes.sizeof(cr),
+            )
+        except Exception:
+            pass
+
+    @staticmethod
+    def _hex_to_rgb_static(h: str):
+        h = h.lstrip("#")
+        return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+
+
+class _DwmColorization(ctypes.Structure):
+    _fields_ = [
+        ("Color", ctypes.c_uint),
+        ("IsEnabled", ctypes.c_int),
+    ]
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

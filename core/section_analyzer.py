@@ -1,11 +1,10 @@
 import bisect
-from typing import List
 
-from core.models import Note, MusicalSection
 from core.core import TempoMap, get_time_groups
+from core.models import MusicalSection, Note
 
 
-def assign_hands(notes: List[Note]):
+def assign_hands(notes: list[Note]):
     """Assign left/right hand to unassigned notes based on pitch and timing groups.
 
     Replaces the FingeringEngine class. Groups simultaneous notes together and
@@ -23,7 +22,7 @@ def assign_hands(notes: List[Note]):
 
 
 class SectionAnalyzer:
-    def __init__(self, notes: List[Note], tempo_map: TempoMap, debug_log=None):
+    def __init__(self, notes: list[Note], tempo_map: TempoMap, debug_log=None):
         self.notes = sorted(notes, key=lambda n: n.start_time)
         self._note_times = [n.start_time for n in self.notes]
         self.tempo_map = tempo_map
@@ -33,7 +32,7 @@ class SectionAnalyzer:
         if self._log is not None:
             self._log(msg)
 
-    def analyze(self) -> List[MusicalSection]:
+    def analyze(self) -> list[MusicalSection]:
         if not self.notes:
             self._debug("[SECTIONS] No notes — returning empty section list")
             return []
@@ -53,7 +52,7 @@ class SectionAnalyzer:
             )
         return sections
 
-    def _analyze_by_silence(self) -> List[MusicalSection]:
+    def _analyze_by_silence(self) -> list[MusicalSection]:
         boundaries = self._detect_grand_pauses()
         sections = []
         for i in range(len(boundaries) - 1):
@@ -71,7 +70,7 @@ class SectionAnalyzer:
             sections.append(MusicalSection(start_time, end_time, sec_notes, articulation, pace, start_beat, end_beat))
         return sections
 
-    def _analyze_by_measures(self) -> List[MusicalSection]:
+    def _analyze_by_measures(self) -> list[MusicalSection]:
         total_dur = max(n.end_time for n in self.notes)
         measures = self.tempo_map.get_measure_boundaries(total_dur)
         sections = []
@@ -119,7 +118,7 @@ class SectionAnalyzer:
             sections.append(MusicalSection(current_section_start, sec_end, list(current_notes_in_section), prev_style, prev_pace, s_beat, e_beat))
         return sections
 
-    def _detect_grand_pauses(self) -> List[int]:
+    def _detect_grand_pauses(self) -> list[int]:
         indices = [0]
         if not self.notes: return indices
         last_end_time = self.notes[0].end_time
@@ -135,7 +134,7 @@ class SectionAnalyzer:
         indices.append(len(self.notes))
         return indices
 
-    def _classify_bass_articulation(self, notes: List[Note]) -> str:
+    def _classify_bass_articulation(self, notes: list[Note]) -> str:
         lh_notes = [n for n in notes if n.hand == 'left']
         if len(lh_notes) < 2: return 'legato'
         total_overlap = 0.0
@@ -158,7 +157,7 @@ class SectionAnalyzer:
         if avg_ratio <= 0.60: return 'staccato'
         return 'hybrid'
 
-    def _classify_pace_beats(self, notes: List[Note], start_beat: float, end_beat: float) -> str:
+    def _classify_pace_beats(self, notes: list[Note], start_beat: float, end_beat: float) -> str:
         duration_beats = end_beat - start_beat
         if duration_beats <= 0: return 'normal'
         npb = len(notes) / duration_beats

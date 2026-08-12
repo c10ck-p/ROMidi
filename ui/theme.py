@@ -10,10 +10,10 @@ ThemeManager persists custom themes and the active-theme name to
 """
 
 from __future__ import annotations
-import json
-from dataclasses import dataclass, asdict, field
-from pathlib import Path
 
+import json
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
 
 # ── Colour helpers ─────────────────────────────────────────────────────────
 
@@ -55,7 +55,7 @@ class ThemeColors:
         return d
 
     @classmethod
-    def from_dict(cls, d: dict) -> "ThemeColors":
+    def from_dict(cls, d: dict) -> ThemeColors:
         d = {k: v for k, v in d.items() if k in cls.__dataclass_fields__}
         return cls(**d)
 
@@ -227,6 +227,29 @@ QPushButton#stop_button:disabled {
     color: %(stop_dis_text)s;
 }
 
+/* Preview button */
+QPushButton#preview_button {
+    background-color: transparent;
+    border: 1.5px solid %(accent)s;
+    border-radius: 6px;
+    color: %(accent)s;
+    min-width: 80px;
+}
+QPushButton#preview_button:hover {
+    background-color: %(accent)s;
+    color: #ffffff;
+}
+QPushButton#preview_button:checked {
+    background-color: %(accent)s;
+    color: #ffffff;
+    border-color: %(accent)s;
+}
+QPushButton#preview_button:disabled {
+    background-color: transparent;
+    border-color: %(dis_border)s;
+    color: %(dis_text)s;
+}
+
 /* Save button */
 QPushButton#save_button {
     background-color: %(save_bg)s;
@@ -306,6 +329,22 @@ QSpinBox::up-button, QSpinBox::down-button {
 QDoubleSpinBox::up-button:hover, QDoubleSpinBox::down-button:hover,
 QSpinBox::up-button:hover, QSpinBox::down-button:hover {
     background-color: %(spinner_hover)s;
+}
+QDoubleSpinBox::up-arrow, QSpinBox::up-arrow {
+    width: 8px;
+    height: 8px;
+    color: %(text_secondary)s;
+}
+QDoubleSpinBox::up-arrow:hover, QSpinBox::up-arrow:hover {
+    color: %(accent)s;
+}
+QDoubleSpinBox::down-arrow, QSpinBox::down-arrow {
+    width: 8px;
+    height: 8px;
+    color: %(text_secondary)s;
+}
+QDoubleSpinBox::down-arrow:hover, QSpinBox::down-arrow:hover {
+    color: %(accent)s;
 }
 
 /* Checkboxes */
@@ -636,7 +675,8 @@ QPushButton#cs_save_btn {
 
 /* ── Transport buttons in icon mode (collapsed view) ─────────── */
 QPushButton#play_button[icon_mode="true"],
-QPushButton#stop_button[icon_mode="true"] {
+QPushButton#stop_button[icon_mode="true"],
+QPushButton#preview_button[icon_mode="true"] {
     font-family: "Segoe MDL2 Assets";
     font-size: 14pt;
     min-width: 0;

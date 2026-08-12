@@ -1,5 +1,5 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QScrollArea
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QScrollArea, QVBoxLayout, QWidget
 
 from ui.visualizer import PianoWidget, TimelineWidget
 

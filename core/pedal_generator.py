@@ -1,12 +1,12 @@
+import bisect
 import os
 import sys
-import bisect
-import numpy as np
-import onnxruntime as ort
-from typing import List, Optional, Callable
+from collections.abc import Callable
 
-from core.models import Note, MusicalSection, KeyEvent
+import numpy as np
+
 from core.core import get_time_groups
+from core.models import KeyEvent, MusicalSection, Note
 
 # Module-level ONNX session cache (replaces PedalGenerator._session class variable).
 _session = None
@@ -22,9 +22,9 @@ def _get_model_path() -> str:
     return os.path.join(base, 'pedal_bilstm.onnx')
 
 
-def generate_events(config: dict, final_notes: List[Note], sections: List[MusicalSection],
-                    debug_log: Optional[Callable[[str], None]] = None) -> List[KeyEvent]:
-    style = config.get('pedal_style')
+def generate_events(config: dict, final_notes: list[Note], sections: list[MusicalSection],
+                    debug_log: Callable[[str], None] | None = None) -> list[KeyEvent]:
+    style = config.get('pedal_style', '').lower()
     if style == 'none':
         if debug_log is not None:
             debug_log("[PEDAL] Style: none — no pedal events generated")
@@ -90,7 +90,7 @@ def generate_events(config: dict, final_notes: List[Note], sections: List[Musica
     return events
 
 
-def _generate_ai_pedal(notes: List[Note], debug_log: Optional[Callable[[str], None]]) -> List[KeyEvent]:
+def _generate_ai_pedal(notes: list[Note], debug_log: Callable[[str], None] | None) -> list[KeyEvent]:
     global _session
     fps = 50.0
     model_path = _get_model_path()
@@ -100,12 +100,18 @@ def _generate_ai_pedal(notes: List[Note], debug_log: Optional[Callable[[str], No
         if debug_log is not None: debug_log("AI generation skipped: Model not found.")
         return []
 
+    try:
+        import onnxruntime as ort
+    except ImportError as e:
+        if debug_log is not None: debug_log(f"AI generation aborted: onnxruntime not available -> {e!s}")
+        return []
+
     if _session is None:
         try:
             providers = ['DmlExecutionProvider', 'CUDAExecutionProvider', 'CPUExecutionProvider']
             _session = ort.InferenceSession(model_path, providers=providers)
         except Exception as e:
-            if debug_log is not None: debug_log(f"AI generation aborted: Runtime Error -> {str(e)}")
+            if debug_log is not None: debug_log(f"AI generation aborted: Runtime Error -> {e!s}")
             return []
 
     # 2. Matrix Translation
@@ -132,7 +138,7 @@ def _generate_ai_pedal(notes: List[Note], debug_log: Optional[Callable[[str], No
         ort_outs = _session.run(None, {input_name: input_tensor})
         preds = ort_outs[0][0, :, 0]
     except Exception as e:
-        if debug_log is not None: debug_log(f"AI execution crashed during forward pass: {str(e)}")
+        if debug_log is not None: debug_log(f"AI execution crashed during forward pass: {e!s}")
         return []
 
     # 5. Silence Masking
@@ -191,8 +197,8 @@ def _generate_ai_pedal(notes: List[Note], debug_log: Optional[Callable[[str], No
     return events
 
 
-def _generate_adaptive_pedal_driver(driver_notes: List[Note], all_notes: List[Note],
-                                    debug_log: Optional[Callable[[str], None]] = None) -> List[KeyEvent]:
+def _generate_adaptive_pedal_driver(driver_notes: list[Note], all_notes: list[Note],
+                                    debug_log: Callable[[str], None] | None = None) -> list[KeyEvent]:
     events = []
     if not driver_notes:
         if debug_log is not None:
@@ -263,7 +269,7 @@ def _generate_adaptive_pedal_driver(driver_notes: List[Note], all_notes: List[No
     return events
 
 
-def _generate_harmonic_pedal(events: List[KeyEvent], bass_notes: List[Note]):
+def _generate_harmonic_pedal(events: list[KeyEvent], bass_notes: list[Note]):
     if not bass_notes: return
     current_bass_pitch = -1
     for i, note in enumerate(bass_notes):

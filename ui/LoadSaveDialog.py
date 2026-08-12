@@ -1,25 +1,41 @@
-import os
 import json
+import os
 from datetime import datetime
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QSplitter,
-                             QTreeWidget, QTreeWidgetItem, QWidget,
-                             QScrollArea, QPushButton,
-                             QLabel, QFrame, QGridLayout, QMessageBox, QInputDialog)
-from PyQt6.QtCore import Qt
 
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QDialog,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QSplitter,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
+
+from i18n import tr, language_changed
 from ui.theme import ThemeManager, generate_stylesheet
 
 
 class LoadSaveDialog(QDialog):
     def __init__(self, save_dir, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Load Saved Playback")
+        self.setWindowTitle(tr("Load Saved Playback"))
         self.resize(820, 520)
         self.setStyleSheet(generate_stylesheet(ThemeManager.get_active()))
         self.save_dir = save_dir
         self.selected_file = None
         self._setup_ui()
+        self._retranslate()
         self._load_files()
+        language_changed().connect(self._retranslate)
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
@@ -28,14 +44,12 @@ class LoadSaveDialog(QDialog):
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        # ── Left: tree ────────────────────────────────────────────────
         self.tree = QTreeWidget()
         self.tree.setHeaderHidden(True)
         self.tree.setAlternatingRowColors(True)
         self.tree.itemSelectionChanged.connect(self._on_selection_changed)
         splitter.addWidget(self.tree)
 
-        # ── Right: details pane ───────────────────────────────────────
         self.details_widget = QWidget()
         self.details_layout = QVBoxLayout(self.details_widget)
         self.details_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -51,32 +65,39 @@ class LoadSaveDialog(QDialog):
 
         layout.addWidget(splitter)
 
-        # ── Buttons ───────────────────────────────────────────────────
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(6)
 
-        self.rename_btn = QPushButton("Rename")
-        self.delete_btn = QPushButton("Delete")
-        self.delete_btn.setObjectName("stop_button")   # reuse red styling
-        self.cancel_btn = QPushButton("Cancel")
-        self.load_btn = QPushButton("Load")
-        self.load_btn.setObjectName("save_button")     # reuse accent styling
+        self._rename_btn = QPushButton()
+        self._delete_btn = QPushButton()
+        self._delete_btn.setObjectName("stop_button")
+        self._cancel_btn = QPushButton()
+        self._load_btn = QPushButton()
+        self._load_btn.setObjectName("save_button")
 
-        self.rename_btn.setEnabled(False)
-        self.delete_btn.setEnabled(False)
-        self.load_btn.setEnabled(False)
+        self._rename_btn.setEnabled(False)
+        self._delete_btn.setEnabled(False)
+        self._load_btn.setEnabled(False)
 
-        self.rename_btn.clicked.connect(self._rename_save)
-        self.delete_btn.clicked.connect(self._delete_save)
-        self.cancel_btn.clicked.connect(self.reject)
-        self.load_btn.clicked.connect(self.accept)
+        self._rename_btn.clicked.connect(self._rename_save)
+        self._delete_btn.clicked.connect(self._delete_save)
+        self._cancel_btn.clicked.connect(self.reject)
+        self._load_btn.clicked.connect(self.accept)
 
-        btn_layout.addWidget(self.rename_btn)
-        btn_layout.addWidget(self.delete_btn)
+        btn_layout.addWidget(self._rename_btn)
+        btn_layout.addWidget(self._delete_btn)
         btn_layout.addStretch()
-        btn_layout.addWidget(self.cancel_btn)
-        btn_layout.addWidget(self.load_btn)
+        btn_layout.addWidget(self._cancel_btn)
+        btn_layout.addWidget(self._load_btn)
         layout.addLayout(btn_layout)
+
+    def _retranslate(self, lang_code: str = "") -> None:
+        self.setWindowTitle(tr("Load Saved Playback"))
+        self._rename_btn.setText(tr("Rename"))
+        self._delete_btn.setText(tr("Delete"))
+        self._cancel_btn.setText(tr("Cancel"))
+        self._load_btn.setText(tr("Load"))
+        self._load_files()
 
     def _load_files(self):
         self.tree.clear()
@@ -91,7 +112,7 @@ class LoadSaveDialog(QDialog):
                     with open(filepath, 'r') as file:
                         data = json.load(file)
                         metadata = data.get('metadata', {})
-                        midi_name = metadata.get('source_midi_filename', 'Unknown MIDI')
+                        midi_name = metadata.get('source_midi_filename', tr('Unknown MIDI'))
                         if midi_name not in grouped_files:
                             grouped_files[midi_name] = []
                         grouped_files[midi_name].append((filename, filepath, metadata))
@@ -107,7 +128,7 @@ class LoadSaveDialog(QDialog):
             files.sort(key=lambda x: x[2].get('creation_timestamp', ''), reverse=True)
 
             for _f, filepath, metadata in files:
-                timestamp = metadata.get('creation_timestamp', 'Unknown Time')
+                timestamp = metadata.get('creation_timestamp', tr('Unknown Time'))
                 try:
                     dt = datetime.fromisoformat(timestamp)
                     timestamp_str = dt.strftime("%Y-%m-%d  %H:%M")
@@ -129,9 +150,9 @@ class LoadSaveDialog(QDialog):
         filepath = selected[0].data(0, Qt.ItemDataRole.UserRole)
         if filepath:
             self.selected_file = filepath
-            self.load_btn.setEnabled(True)
-            self.rename_btn.setEnabled(True)
-            self.delete_btn.setEnabled(True)
+            self._load_btn.setEnabled(True)
+            self._rename_btn.setEnabled(True)
+            self._delete_btn.setEnabled(True)
             try:
                 with open(filepath, 'r') as f:
                     data = json.load(f)
@@ -142,9 +163,9 @@ class LoadSaveDialog(QDialog):
             self._disable_actions()
 
     def _disable_actions(self):
-        self.load_btn.setEnabled(False)
-        self.rename_btn.setEnabled(False)
-        self.delete_btn.setEnabled(False)
+        self._load_btn.setEnabled(False)
+        self._rename_btn.setEnabled(False)
+        self._delete_btn.setEnabled(False)
         self._clear_details()
         self.selected_file = None
 
@@ -160,8 +181,8 @@ class LoadSaveDialog(QDialog):
             pass
 
         new_name, ok = QInputDialog.getText(
-            self, "Rename Save",
-            "Enter custom name (leave blank to revert to timestamp):",
+            self, tr("Rename Save"),
+            tr("Enter custom name (leave blank to revert to timestamp):"),
             text=current_custom
         )
         if ok:
@@ -177,14 +198,15 @@ class LoadSaveDialog(QDialog):
                 self._load_files()
                 self._disable_actions()
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Could not rename file:\n{e}")
+                QMessageBox.critical(self, tr("Error"),
+                    tr("Could not rename file:\n%1").arg(str(e)))
 
     def _delete_save(self):
         if not self.selected_file:
             return
         reply = QMessageBox.question(
-            self, 'Delete Save',
-            'Are you sure you want to permanently delete this save?',
+            self, tr('Delete Save'),
+            tr('Are you sure you want to permanently delete this save?'),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         if reply == QMessageBox.StandardButton.Yes:
@@ -193,7 +215,8 @@ class LoadSaveDialog(QDialog):
                 self._load_files()
                 self._disable_actions()
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Could not delete file:\n{e}")
+                QMessageBox.critical(self, tr("Error"),
+                    tr("Could not delete file:\n%1").arg(str(e)))
 
     def _clear_details(self):
         new_widget = QWidget()
@@ -207,14 +230,12 @@ class LoadSaveDialog(QDialog):
     def _display_metadata(self, metadata):
         self._clear_details()
 
-        # Title
-        title = QLabel(metadata.get('source_midi_filename', 'Unknown MIDI'))
+        title = QLabel(metadata.get('source_midi_filename', tr('Unknown MIDI')))
         title.setProperty("role", "title")
         title.setWordWrap(True)
         self.details_layout.addWidget(title)
 
-        # Timestamp
-        ts = metadata.get('creation_timestamp', 'Unknown')
+        ts = metadata.get('creation_timestamp', tr('Unknown'))
         try:
             dt = datetime.fromisoformat(ts)
             date_str = dt.strftime('%B %d, %Y  ·  %I:%M %p')
@@ -224,7 +245,6 @@ class LoadSaveDialog(QDialog):
         date_label.setProperty("role", "muted")
         self.details_layout.addWidget(date_label)
 
-        # Separator
         sep = QFrame()
         sep.setObjectName("h_sep")
         sep.setFrameShape(QFrame.Shape.HLine)
@@ -234,8 +254,7 @@ class LoadSaveDialog(QDialog):
 
         settings = metadata.get('playback_settings', {})
 
-        # Playback settings
-        pb_label = QLabel("Playback Settings")
+        pb_label = QLabel(tr("Playback Settings"))
         pb_label.setProperty("role", "section")
         self.details_layout.addWidget(pb_label)
 
@@ -251,14 +270,17 @@ class LoadSaveDialog(QDialog):
             grid.addWidget(k, row, 0)
             grid.addWidget(v, row, 2)
 
-        add_row(pb_grid, 0, "Tempo", f"{settings.get('tempo', 100)}%")
-        add_row(pb_grid, 1, "Pedal Style", settings.get('pedal_style', 'hybrid').title())
-        add_row(pb_grid, 2, "88-Key Layout", "Yes" if settings.get('use_88_key_layout') else "No")
+        add_row(pb_grid, 0, tr("Tempo"),
+                tr("%1%").arg(settings.get('tempo', 100)))
+        add_row(pb_grid, 1, tr("Pedal Style"),
+                settings.get('pedal_style', 'hybrid').title())
+        use_88 = settings.get('use_88_key_layout')
+        add_row(pb_grid, 2, tr("88-Key Layout"),
+                tr("Yes") if use_88 else tr("No"))
         self.details_layout.addLayout(pb_grid)
         self.details_layout.addSpacing(8)
 
-        # Humanization
-        hum_label = QLabel("Humanization")
+        hum_label = QLabel(tr("Humanization"))
         hum_label.setProperty("role", "section")
         self.details_layout.addWidget(hum_label)
 
@@ -277,27 +299,30 @@ class LoadSaveDialog(QDialog):
             hum_grid.addWidget(v, h_row, 2)
             h_row += 1
 
+        yes = tr("Yes")
         if settings.get('simulate_hands'):
-            add_h_row("Simulate Hands", "Yes")
+            add_h_row(tr("Simulate Hands"), yes)
         if settings.get('enable_chord_roll'):
-            add_h_row("Chord Rolling", "Yes")
+            add_h_row(tr("Chord Rolling"), yes)
         if settings.get('vary_timing'):
-            add_h_row("Vary Timing", f"{settings.get('timing_variance', 0.0)}s")
+            add_h_row(tr("Vary Timing"),
+                      tr("%1s").arg(settings.get('timing_variance', 0.0)))
         if settings.get('vary_articulation'):
-            add_h_row("Vary Articulation",
-                      f"{int(settings.get('articulation', 1.0) * 100)}%")
+            add_h_row(tr("Vary Articulation"),
+                      tr("%1%").arg(int(settings.get('articulation', 1.0) * 100)))
         if settings.get('enable_drift_correction'):
-            add_h_row("Hand Drift",
-                      f"{int(settings.get('drift_decay_factor', 1.0) * 100)}%")
+            add_h_row(tr("Hand Drift"),
+                      tr("%1%").arg(int(settings.get('drift_decay_factor', 1.0) * 100)))
         if settings.get('enable_mistakes'):
-            add_h_row("Mistake Chance", f"{settings.get('mistake_chance', 0.0)}%")
+            add_h_row(tr("Mistake Chance"),
+                      tr("%1%").arg(settings.get('mistake_chance', 0.0)))
         if settings.get('enable_tempo_sway'):
-            inv = " (Inverted)" if settings.get('invert_tempo_sway') else ""
-            add_h_row("Tempo Sway",
-                      f"{settings.get('tempo_sway_intensity', 0.0)}s{inv}")
+            inv = tr(" (Inverted)") if settings.get('invert_tempo_sway') else ""
+            add_h_row(tr("Tempo Sway"),
+                      tr("%1s%2").arg(settings.get('tempo_sway_intensity', 0.0), inv))
 
         if h_row == 0:
-            none_lbl = QLabel("None selected")
+            none_lbl = QLabel(tr("None selected"))
             none_lbl.setProperty("role", "muted")
             none_lbl.setStyleSheet("font-style: italic;")
             hum_grid.addWidget(none_lbl, 0, 0)
