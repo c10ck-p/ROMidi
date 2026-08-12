@@ -95,7 +95,14 @@ class MainWindowUI(QObject):
 
         self._collapsed_humanize_check = QCheckBox()
         self._collapsed_humanize_check.setToolTip("")
-        cs_layout.addWidget(self._collapsed_humanize_check)
+        self._collapsed_always_on_top_check = QCheckBox()
+        self._collapsed_always_on_top_check.setToolTip("")
+        cs_check_row = QHBoxLayout()
+        cs_check_row.setSpacing(12)
+        cs_check_row.addWidget(self._collapsed_humanize_check)
+        cs_check_row.addWidget(self._collapsed_always_on_top_check)
+        cs_check_row.addStretch(1)
+        cs_layout.addLayout(cs_check_row)
 
         self._collapsed_load_btn = QPushButton("")
         self._collapsed_load_btn.setObjectName("cs_load_btn")
@@ -290,6 +297,9 @@ class MainWindowUI(QObject):
         self._collapsed_humanize_check.setText(tr("Humanize"))
         self._collapsed_humanize_check.setToolTip(
             tr("Enable or disable all humanization at once"))
+        self._collapsed_always_on_top_check.setText(tr("Always on Top"))
+        self._collapsed_always_on_top_check.setToolTip(
+            tr("Keep this window above all other windows"))
         self._collapsed_load_btn.setToolTip(tr("Open a MIDI file for playback"))
         self._collapsed_load_saved_btn.setToolTip(tr("Load a saved playback"))
         self._collapsed_save_btn.setToolTip(tr("Save the current playback"))

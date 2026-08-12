@@ -72,10 +72,10 @@ jobs:
           token = os.environ["GH_TOKEN"]
 
           req = urllib.request.Request(
-              "https://api.github.com/repos/smyGitt/HuMidi-Roblox-Piano-Autoplayer/releases/latest",
+              "https://api.github.com/repos/c10ck-p/ROMidi/releases/latest",
               headers={
                   "Authorization": f"Bearer {token}",
-                  "User-Agent": "HuMidi-ci",
+                  "User-Agent": "ROMidi-ci",
                   "Accept": "application/vnd.github+json",
               },
           )
@@ -125,12 +125,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Build HuMidi.exe
+      - name: Build ROMidi.exe
         run: >
           pyinstaller
           --onefile
           --noconsole
-          --name HuMidi
+          --name ROMidi
           --icon icon.ico
           --add-data "icon.ico;."
           main.py
@@ -139,7 +139,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-exe
-          path: dist/HuMidi.exe
+          path: dist/ROMidi.exe
           if-no-files-found: error
 
   # ──────────────────────────────────────────────────────────────────────────
@@ -162,27 +162,27 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # Pass 1: single-file binary → HuMidi.tar.gz (used by the in-app auto-updater)
+      # Pass 1: single-file binary → ROMidi.tar.gz (used by the in-app auto-updater)
       - name: Build onefile binary (for tar.gz)
         run: >
           pyinstaller
           --onefile
           --windowed
-          --name HuMidi
+          --name ROMidi
           --icon icon.ico
           --add-data "icon.ico:."
           main.py
 
-      - name: Package as HuMidi.tar.gz
+      - name: Package as ROMidi.tar.gz
         working-directory: dist
-        run: tar -czf HuMidi.tar.gz HuMidi
+        run: tar -czf ROMidi.tar.gz ROMidi
 
-      # Pass 2: .app bundle → HuMidi.dmg (for first-time installation)
+      # Pass 2: .app bundle → ROMidi.dmg (for first-time installation)
       - name: Build .app bundle (for DMG)
         run: >
           pyinstaller
           --windowed
-          --name HuMidi
+          --name ROMidi
           --icon icon.ico
           --add-data "icon.ico:."
           main.py
@@ -191,24 +191,24 @@ jobs:
         working-directory: dist
         run: >
           hdiutil create
-          -volname "HuMidi"
-          -srcfolder "HuMidi.app"
+          -volname "ROMidi"
+          -srcfolder "ROMidi.app"
           -ov
           -format UDZO
-          HuMidi.dmg
+          ROMidi.dmg
 
       - name: Upload macOS tar.gz artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-tar
-          path: dist/HuMidi.tar.gz
+          path: dist/ROMidi.tar.gz
           if-no-files-found: error
 
       - name: Upload macOS DMG artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-dmg
-          path: dist/HuMidi.dmg
+          path: dist/ROMidi.dmg
           if-no-files-found: error
 
   # ──────────────────────────────────────────────────────────────────────────
@@ -240,10 +240,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.name }}
-          name: "HuMidi ${{ steps.tag.outputs.name }}"
+          name: "ROMidi ${{ steps.tag.outputs.name }}"
           draft: false
           prerelease: false
           files: |
-            artifacts/windows-exe/HuMidi.exe
-            artifacts/macos-tar/HuMidi.tar.gz
-            artifacts/macos-dmg/HuMidi.dmg
+            artifacts/windows-exe/ROMidi.exe
+            artifacts/macos-tar/ROMidi.tar.gz
+            artifacts/macos-dmg/ROMidi.dmg

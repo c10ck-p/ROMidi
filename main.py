@@ -94,6 +94,7 @@ class MainWindow(QMainWindow):
         # View manipulations bound to Window behavior
         self.ui.collapse_btn.clicked.connect(self._sync_play_button)
         self.ui.settings_tab.always_top_check.toggled.connect(self._toggle_always_on_top)
+        self.ui._collapsed_always_on_top_check.toggled.connect(self._toggle_always_on_top)
         self.ui.settings_tab.opacity_slider.valueChanged.connect(self._change_opacity)
 
         # Settings-tab persistence — save immediately on change so closing without playing doesn't lose them
@@ -197,6 +198,12 @@ class MainWindow(QMainWindow):
             if checked: self.setWindowFlags(flags | Qt.WindowType.WindowStaysOnTopHint)
             else: self.setWindowFlags(flags & ~Qt.WindowType.WindowStaysOnTopHint)
             self.show()
+        self.ui.settings_tab.always_top_check.blockSignals(True)
+        self.ui.settings_tab.always_top_check.setChecked(checked)
+        self.ui.settings_tab.always_top_check.blockSignals(False)
+        self.ui._collapsed_always_on_top_check.blockSignals(True)
+        self.ui._collapsed_always_on_top_check.setChecked(checked)
+        self.ui._collapsed_always_on_top_check.blockSignals(False)
 
     def _change_opacity(self, value):
         self.setWindowOpacity(value / 100.0)
@@ -240,11 +247,11 @@ class MainWindow(QMainWindow):
                 self.ui.play_button.setToolTip(tr("Play (%1)").arg(key_str))
         else:
             if self.playback_controller.is_paused():
-                self.ui.play_button.setText(tr("Resume (%1)").arg(key_str))
+                self.ui.play_button.setText(tr("▶  Resume (%1)").arg(key_str))
             elif self.playback_controller.is_playing():
-                self.ui.play_button.setText(tr("Pause (%1)").arg(key_str))
+                self.ui.play_button.setText(tr("⏸  Pause (%1)").arg(key_str))
             else:
-                self.ui.play_button.setText(tr("Play (%1)").arg(key_str))
+                self.ui.play_button.setText(tr("▶  Play (%1)").arg(key_str))
             self.ui.play_button.setToolTip(tr("Start, pause, or resume playback"))
 
     def toggle_playback_state(self):

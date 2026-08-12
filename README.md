@@ -1,51 +1,65 @@
-# HuMidi
-#### (formerly Midi2Key. Way too many Midi2Keys out there..)
-MIDI2Key includes various humanization options for a natural, human-like playback. Including automatic pedal timing and 88-key keyboard support. Easy to run via executable or source code, with GUI support included.
+# ROMidi
 
+**English** | [简体中文](README.zh_CN.md) | [繁體中文](README.zh_TW.md)
 
-<img width="326" height="396" alt="Midi2Key / HuMidi v1.3 Playback tab" src="https://github.com/user-attachments/assets/c9d39ad9-0517-4ea6-acb3-da312868aaed" />
-<img width="326" height="396" alt="Midi2Key / HuMidi v1.3 Visualizer tab" src="https://github.com/user-attachments/assets/dfe54071-70ba-4c80-b2a8-3c866f3f7cb1" />
-<img width="326" height="396" alt="Midi2Key / HuMidi v1.3 Settings tab" src="https://github.com/user-attachments/assets/17b5eac5-b194-4d77-af0e-f1d1c17e463a" />
+A community fork of [HuMidi](https://github.com/smyGitt/HuMidi-Roblox-Piano-Autoplayer) — a MIDI-to-keyboard autoplayer for Roblox piano games with humanization, automatic pedal timing, and 88-key support.
 
+ROMidi focuses on UI polish, internationalization, and theme customization while preserving all original functionality.
 
+---
 
-# How do you run it?
-### If you downloaded the .exe from the releases:
-  just run the .exe! 
+## What's new in ROMidi vs HuMidi
 
-### Or, if you don't trust me...
-You can create your own `.exe` with pyinstaller. I've provided the icon `icon.ico`, so use with this command:
-    
-    pyinstaller --noconsole --onefile --icon=icon.ico --add-data "icon.ico;." main.py
+| Feature | Description |
+|---------|-------------|
+| **Multi-Language Support** | Built-in i18n with Simplified Chinese and Traditional Chinese translations |
+| **Follow System Language** | Automatically detects the OS language on first launch |
+| **Improved Themes** | Enhanced QSS-based theme engine with better color synchronization |
+| **Preview Fix** | Fixed the preview toggle so stopping and restarting works correctly |
+| **Bug Fixes** | Translation lookup normalization and other refinements |
 
-  make sure the .ico file and .py file is in the same directory.
+---
 
-### ...if you choose to do neither above:
-You need to run this in a command prompt. After you navigate to where the .py files are. type for example:
+## Screenshots
 
-    python main.py
-    
-  else if you are not going to use the main.py with GUI, for whatever reason, navigate to the backup folder, open command prompt there, then enter:
+<img width="326" height="396" alt="ROMidi Playback tab" src="https://github.com/user-attachments/assets/c9d39ad9-0517-4ea6-acb3-da312868aaed" />
+<img width="326" height="396" alt="ROMidi Visualizer tab" src="https://github.com/user-attachments/assets/dfe54071-70ba-4c80-b2a8-3c866f3f7cb1" />
+<img width="326" height="396" alt="ROMidi Settings tab" src="https://github.com/user-attachments/assets/17b5eac5-b194-4d77-af0e-f1d1c17e463a" />
 
-    python final_beforeGUI.py --help
+## Quick Start
 
-  (of course, you may replace final_beforeGUI.py with noDuration.py, or any in the backup if desired)
+### Run from source
 
-this will show you all the available flags and formatting. Though I can't guarantee the same quality from the GUI versions, because the noGUI version hasn't been updated at all.
+```bash
+# Install dependencies
+pip install -r requirements.txt
 
-Remember that it accepts .mid files only. it works best with piano-only .mid, but I've seen it work with mixed instruments.
+# Launch
+python main.py
+```
 
-# Dependencies
-If you chose to not trust me (not judging) and did not want to use the `exe` in the releases, you might need to install a few python libraries. You will see that `main.py` and other `.py` files import various libraries. You can't run this application without downloading all of them. Some (not all) are:
+### Build an executable
 
-    import mido, time, headpq, threading, random, copy, numpy, sys, dataclasses, import, collections, os, PyQt6  
+```bash
+pyinstaller --noconsole --onefile --icon=icon.ico --add-data "icon.ico;." main.py
+```
 
-and there may be more for the other `.py` files. Please check if you have every one of these libraries installed.
+The app accepts `.mid` files. Works best with piano-only MIDI, but mixed instruments are also supported.
 
-if you get some warning about pyinstaller not being compatible with some module, like `typing`, then just uninstall it with 
+## Dependencies
 
-    pip uninstall <MODULE NAME>
-    
-  or
-  
-    python -m pip uninstall <MODULE NAME>
+| Package | Purpose |
+|---------|---------|
+| [PyQt6](https://riverbankcomputing.com/software/pyqt/) | GUI framework |
+| [mido](https://github.com/mido/mido) | MIDI file parsing |
+| [numpy](https://numpy.org/) | Audio/numeric processing |
+| [onnxruntime](https://github.com/microsoft/onnxruntime) | AI pedal timing inference |
+| [pynput](https://github.com/moses-palmer/pynput) | Keyboard/mouse simulation |
+
+See `requirements.txt` for exact version constraints.
+
+## License
+
+This project is licensed under the MIT License — see the [HuMidi](./ui/LicenseTab.py) license entry for the full text of the original software.
+
+Original work Copyright (c) 2026 smyGitt — [HuMidi on GitHub](https://github.com/smyGitt/HuMidi-Roblox-Piano-Autoplayer)

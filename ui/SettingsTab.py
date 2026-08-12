@@ -201,8 +201,7 @@ class SettingsTab(QWidget):
         self.lang_combo.blockSignals(True)
         self.lang_combo.clear()
         for code, name in get_available_languages():
-            display = tr(name) if code == 'follow_system' else name
-            self.lang_combo.addItem(display, code)
+            self.lang_combo.addItem(name, code)
         current = self._saved_lang or 'follow_system'
         idx = self.lang_combo.findData(current)
         if idx >= 0:
@@ -225,11 +224,7 @@ class SettingsTab(QWidget):
         current_data = self.lang_combo.currentData()
         self.lang_combo.clear()
         for code, name in get_available_languages():
-            if code == 'follow_system':
-                display = tr("Follow System")
-            else:
-                display = name
-            self.lang_combo.addItem(display, code)
+            self.lang_combo.addItem(name, code)
         idx = self.lang_combo.findData(current_data)
         if idx >= 0:
             self.lang_combo.setCurrentIndex(idx)

@@ -18,7 +18,7 @@ from PyQt6.QtCore import QObject, pyqtSignal, QLocale
 _TRANSLATIONS: dict[str, str] = {}
 _CURRENT_LANG: str = 'en'
 
-_I18N_DIR = os.path.dirname(os.path.abspath(__file__))
+_I18N_DIR = os.path.join(sys._MEIPASS, 'i18n') if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
 
 
 class _TranslatorNotifier(QObject):
@@ -54,20 +54,44 @@ def get_current_language() -> str:
     return _CURRENT_LANG
 
 
-def get_available_languages() -> list[tuple[str, str]]:
-    """Returns [(lang_code, display_name), ...] including English."""
-    langs = [('follow_system', 'Follow System')]
-    langs.append(('en', 'English'))
-    display_map = {
+_LANG_NAMES = {
+    'en': {
+        'follow_system': 'Follow System',
+        'en': 'English',
         'zh_CN': 'Simplified Chinese',
         'zh_TW': 'Traditional Chinese',
         'ja':    'Japanese',
         'ko':    'Korean',
-    }
+    },
+    'zh_CN': {
+        'follow_system': '跟随系统',
+        'en': 'English',
+        'zh_CN': '简体中文',
+        'zh_TW': '繁體中文',
+        'ja':    '日本語',
+        'ko':    '한국어',
+    },
+    'zh_TW': {
+        'follow_system': '跟隨系統',
+        'en': 'English',
+        'zh_CN': '簡體中文',
+        'zh_TW': '繁體中文',
+        'ja':    '日本語',
+        'ko':    '한국어',
+    },
+}
+
+
+def get_available_languages() -> list[tuple[str, str]]:
+    """Returns [(lang_code, display_name), ...] including English.
+    Display names are localized based on the current UI language."""
+    localized = _LANG_NAMES.get(_CURRENT_LANG, _LANG_NAMES['en'])
+    langs = [('follow_system', localized['follow_system'])]
+    langs.append(('en', localized['en']))
     for fname in sorted(os.listdir(_I18N_DIR)):
         if fname.endswith('.ts'):
             code = fname[:-3]
-            name = display_map.get(code, code)
+            name = localized.get(code, code)
             langs.append((code, name))
     return langs
 

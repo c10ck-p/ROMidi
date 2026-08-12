@@ -204,7 +204,7 @@ None: No sustain pedal</source>
     <message>
       <!-- Source: main.py:L160 -->
       <source>Click to stop previewing</source>
-      <translation></translation>
+      <translation>点击停止试听</translation>
     </message>
     <message>
       <!-- Source: ui\MainWindowUI.py:L321, ui\MainWindowUI.py:L328, ui\MainWindowUI.py:L490 -->
@@ -619,6 +619,21 @@ None: No sustain pedal</source>
       <!-- Source: main.py:L240, main.py:L247 -->
       <source>Play (%1)</source>
       <translation>演奏（%1）</translation>
+    </message>
+    <message>
+      <!-- Source: main.py:L254 -->
+      <source>▶  Play (%1)</source>
+      <translation>▶  演奏（%1）</translation>
+    </message>
+    <message>
+      <!-- Source: main.py:L250 -->
+      <source>▶  Resume (%1)</source>
+      <translation>▶  继续（%1）</translation>
+    </message>
+    <message>
+      <!-- Source: main.py:L252 -->
+      <source>⏸  Pause (%1)</source>
+      <translation>⏸  暂停（%1）</translation>
     </message>
     <message>
       <!-- Source: ui\ThemeDialog.py:L58 -->

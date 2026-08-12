@@ -7,7 +7,8 @@ import urllib.request
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
-RELEASES_API = "https://api.github.com/repos/smyGitt/HuMidi-Roblox-Piano-Autoplayer/releases/latest"
+GITHUB_REPO = "c10ck-p/ROMidi"
+RELEASES_API = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
 
 def parse_version(tag: str) -> tuple:
@@ -21,9 +22,9 @@ def _get_platform_asset(assets: list) -> str:
     system = platform.system()
     for asset in assets:
         name = asset.get("name", "").lower()
-        if system == "Windows" and name == "humidi.exe":
+        if system == "Windows" and name == "romidi.exe":
             return asset["browser_download_url"]
-        if system == "Darwin" and name == "humidi.tar.gz":
+        if system == "Darwin" and name == "romidi.tar.gz":
             return asset["browser_download_url"]
     return ""
 
@@ -43,7 +44,7 @@ class UpdateChecker(QThread):
             return
         try:
             req = urllib.request.Request(
-                RELEASES_API, headers={"User-Agent": "HuMidi-updater"}
+                RELEASES_API, headers={"User-Agent": "ROMidi-updater"}
             )
             with urllib.request.urlopen(req, timeout=8) as resp:
                 data = json.loads(resp.read().decode())
@@ -82,10 +83,10 @@ class DownloadWorker(QThread):
         system = platform.system()
         exe_dir = os.path.dirname(sys.executable)
         ext = ".tar.gz" if system == "Darwin" else ".exe"
-        tmp_path = os.path.join(exe_dir, f"_humidi_update_tmp{ext}")
+        tmp_path = os.path.join(exe_dir, "_romidi_update_tmp{ext}")
         try:
             req = urllib.request.Request(
-                self._url, headers={"User-Agent": "HuMidi-updater"}
+                self._url, headers={"User-Agent": "ROMidi-updater"}
             )
             with urllib.request.urlopen(req, timeout=60) as resp:
                 with open(tmp_path, "wb") as f:
@@ -110,7 +111,7 @@ class DownloadWorker(QThread):
         system = platform.system()
 
         if system == "Windows":
-            bat_path = os.path.join(exe_dir, "_humidi_updater.bat")
+            bat_path = os.path.join(exe_dir, "_romidi_updater.bat")
             bat_content = (
                 "@echo off\n"
                 ":waitloop\n"
@@ -132,7 +133,7 @@ class DownloadWorker(QThread):
             )
 
         elif system == "Darwin":
-            sh_path = os.path.join(exe_dir, "_humidi_updater.sh")
+            sh_path = os.path.join(exe_dir, "_romidi_updater.sh")
             sh_content = (
                 "#!/bin/bash\n"
                 "sleep 2\n"
